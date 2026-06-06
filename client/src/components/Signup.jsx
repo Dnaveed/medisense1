@@ -11,7 +11,8 @@ function Signup() {
     email: '',
     phone: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    userType: 'user'
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -51,7 +52,8 @@ function Signup() {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          password: formData.password
+          password: formData.password,
+          userType: formData.userType
         })
       })
 
@@ -187,6 +189,32 @@ function Signup() {
                       required
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="userType">
+                    Account Type
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m8-4a4 4 0 11-8 0 4 4 0 018 0zM15 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                      </svg>
+                    </div>
+                    <select
+                      id="userType"
+                      name="userType"
+                      value={formData.userType}
+                      onChange={handleChange}
+                      className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-gray-900"
+                    >
+                      <option value="user">Patient / User</option>
+                      <option value="organisation">Organization / Doctor</option>
+                    </select>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Choose organization to register as a prescription provider.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

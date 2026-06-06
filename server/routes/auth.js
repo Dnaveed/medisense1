@@ -10,7 +10,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 // Signup route
 router.post('/signup', async (req, res) => {
   try {
-    const { name, email, phone, password } = req.body;
+    const { name, email, phone, password, userType } = req.body;
+    const normalizedUserType = userType === 'organisation' ? 'organisation' : 'user';
 
     // Check if user already exists with this email
     const existingEmail = await User.findOne({ email });
@@ -25,7 +26,7 @@ router.post('/signup', async (req, res) => {
     }
 
     // Create new user
-    const user = new User({ name, email, phone, password });
+    const user = new User({ name, email, phone, password, userType: normalizedUserType });
     await user.save();
 
     // Create JWT token
