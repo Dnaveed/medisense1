@@ -17,6 +17,11 @@ const medicineSchema = new mongoose.Schema(
 			ref: "Prescription",
 			required: [true, "Prescription ID is required"],
 		},
+		medDatabaseId: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "MedDatabase",
+			default: null,
+		},
 		medicineName: {
 			type: String,
 			required: [true, "Medicine name is required"],

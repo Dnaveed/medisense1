@@ -2,6 +2,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const Medicine = require("../models/Medicine");
+const MedDatabase = require("../models/MedDatabase");
 const Prescription = require("../models/Prescription");
 const User = require("../models/User");
 const { createNewMedicineNotification } = require("../services/cronService");
@@ -81,23 +82,35 @@ router.post("/create", authenticateToken, isOrganisation, async (req, res) => {
 		await prescription.save();
 
 		// Step 2: Create individual Medicine documents with reference to the prescription
-		const medicineDocuments = medicines.map((med) => ({
-			patientId,
-			prescribedBy: req.user.userId,
-			medicineName: med.name,
-			quantity: med.quantity,
-			startDate: new Date(med.startDate),
-			endDate: new Date(med.endDate),
-			timing: {
-				beforeBreakfast: med.timing.beforeBreakfast || false,
-				afterBreakfast: med.timing.afterBreakfast || false,
-				beforeLunch: med.timing.beforeLunch || false,
-				afterLunch: med.timing.afterLunch || false,
-				beforeDinner: med.timing.beforeDinner || false,
-				afterDinner: med.timing.afterDinner || false,
-			},
-			prescriptionId: prescription._id
-		}));
+		// Resolve medDatabase entries (if any) to attach `medDatabaseId` for richer info
+		const medNames = medicines.map((m) => (m.name || '').trim());
+		const medDbDocs = await MedDatabase.find({ medicineName: { $in: medNames } });
+		const medDbMap = {};
+		medDbDocs.forEach((d) => {
+			medDbMap[d.medicineName.trim().toLowerCase()] = d._id;
+		});
+
+		const medicineDocuments = medicines.map((med) => {
+			const medName = (med.name || '').trim();
+			return {
+				patientId,
+				prescribedBy: req.user.userId,
+				medicineName: medName,
+				quantity: med.quantity,
+				startDate: new Date(med.startDate),
+				endDate: new Date(med.endDate),
+				timing: {
+					beforeBreakfast: med.timing.beforeBreakfast || false,
+					afterBreakfast: med.timing.afterBreakfast || false,
+					beforeLunch: med.timing.beforeLunch || false,
+					afterLunch: med.timing.afterLunch || false,
+					beforeDinner: med.timing.beforeDinner || false,
+					afterDinner: med.timing.afterDinner || false,
+				},
+				prescriptionId: prescription._id,
+				medDatabaseId: medDbMap[medName.toLowerCase()] || null,
+			};
+		});
 
 		// Insert all medicines
 		const createdMedicines = await Medicine.insertMany(medicineDocuments);
@@ -138,7 +151,7 @@ router.get(
 		try {
 			const prescriptions = await Prescription.find({ prescribedBy: req.user.userId })
 				.populate("patientId", "name email phone")
-				.populate("medicines")
+				.populate({ path: "medicines", populate: { path: "medDatabaseId" } })
 				.sort({ createdAt: -1 });
 
 			res.status(200).json({
@@ -162,7 +175,8 @@ router.get("/patient-prescriptions", authenticateToken, async (req, res) => {
 		const prescriptions = await Prescription.find({ patientId: req.user.userId })
 			.populate({
 				path: "medicines",
-				options: { sort: { createdAt: -1, _id: -1 } }
+				options: { sort: { createdAt: -1, _id: -1 } },
+				populate: { path: "medDatabaseId" }
 			})
 			.populate("prescribedBy", "name email")
 			.sort({ createdAt: -1, _id: -1 });
@@ -231,7 +245,7 @@ router.get(
 				prescribedBy: req.user.userId 
 			})
 				.populate("prescribedBy", "name email")
-				.populate("medicines")
+				.populate({ path: "medicines", populate: { path: "medDatabaseId" } })
 				.sort({ createdAt: -1, _id: -1 });
 
 			res.status(200).json({
